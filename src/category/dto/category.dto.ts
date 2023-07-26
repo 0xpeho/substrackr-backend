@@ -1,4 +1,4 @@
-import { IsNotEmpty } from "class-validator";
+import { IsNotEmpty, IsOptional } from "class-validator";
 import { Category } from "../category.entity";
 
 export class CategoryDto {
@@ -8,4 +8,6 @@ export class CategoryDto {
   @IsNotEmpty()
   title: string;
 
+  @IsOptional()
+  userId?:string
 }

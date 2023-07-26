@@ -54,7 +54,7 @@ export class SettingsService {
 
     if (updateUserSettingsDto.informBeforeExpirationDateUnit) {
       //TODO:check if string is of type DurationInputArg2
-      settings.informBeforeExpirationDateAmount = updateUserSettingsDto.informBeforeExpirationDateAmount;
+      settings.informBeforeExpirationDateUnit = updateUserSettingsDto.informBeforeExpirationDateUnit;
     }
 
 
