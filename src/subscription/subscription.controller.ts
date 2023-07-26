@@ -4,17 +4,19 @@ import {
   Delete,
   Get, Logger,
   Param,
-  Patch,
-  Post,
+  Post, Put,
   Query, UseGuards
 } from "@nestjs/common";
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
-import { GetSubscriptionFilterDto } from './dto/get-subscription-filter.dto';
+import { SubscriptionDto } from './dto/subscription.dto';
 import { SubscriptionsService } from "./subscriptions.service";
 import { Subscription } from "./subscription.entity";
 import { AuthGuard } from "@nestjs/passport";
-import { User } from "../auth/user.entity";
+import { User } from "../user/user.entity";
 import { GetUser } from "../auth/get-user.decorator";
+import { IdsDto } from "./dto/ids.dto";
+import { CategoryDto } from "../category/dto/category.dto";
+import { SubscriptionTotalDto } from "./dto/subscriptionTotal.dto";
+
 
 @Controller('subscriptions')
 @UseGuards(AuthGuard('jwt'))
@@ -24,38 +26,49 @@ export class SubscriptionController {
   constructor(private subscriptionsService: SubscriptionsService) {}
 
   @Get()
-  getSubscriptions(@Query() filterdto:GetSubscriptionFilterDto, @GetUser() user : User): Promise<Subscription[]>{
-    this.logger.verbose(`User "${user.username}" retrieving all subscriptions with filter: ${ JSON.stringify(filterdto) }`)
-    return this.subscriptionsService.getTasks(filterdto, user);
+  getSubscriptions(@GetUser() user : User): Promise<Subscription[]>{
+    return this.subscriptionsService.getSubscriptions(user);
   }
 
-  @Get('/:id')
+  @Get('/timeframe')
+  getSubscriptionsTimeframe(@Query('from') from: string,
+                   @Query('to') to: string, @GetUser() user : User): Promise<Subscription[]>{
+    return this.subscriptionsService.getSubscriptions(user,from,to);
+  }
+
+  @Get('/get/:id')
   getSubscriptionById(@Param('id') id: string, @GetUser() user : User): Promise<Subscription> {
-    return this.subscriptionsService.getTaskById(id, user);
+    return this.subscriptionsService.getSubscriptionById(id, user);
+  }
+
+  @Get('/subscription-expenses')
+  getTotalSubscriptionExpenses(@Query('from') from: string,
+                                @Query('to') to: string, @GetUser() user : User): Promise<SubscriptionTotalDto[]> {
+    return this.subscriptionsService.getTotalSubscriptionExpenses(user,from,to);
+  }
+
+  @Get('/all-time-expenses')
+  getAllTimeExpenses(@GetUser() user : User): Promise<number> {
+    return this.subscriptionsService.getAllTimeExpenses(user);
   }
 
 
   @Post()
-  createSubscription(@Body() createSubscriptionDto: CreateSubscriptionDto, @GetUser() user : User): Promise<Subscription> {
-    this.logger.verbose(`User "${user.username}" creating a new Subscription with data ${JSON.stringify(createSubscriptionDto)}`)
-    return this.subscriptionsService.createSubscription(createSubscriptionDto,user);
+  createSubscription(@Body() subscription: SubscriptionDto, @GetUser() user : User): Promise<Subscription> {
+    return this.subscriptionsService.createSubscription(subscription,user);
   }
 
-  @Delete('/:id')
-  deleteSubscriptionById(@Param('id') id: string, @GetUser() user:User): Promise<void> {
-    return this.subscriptionsService.deleteSubscription(id,user);
+  @Delete()
+  deleteSubscriptionById(@Body() ids:IdsDto, @GetUser() user:User): void {
+    return this.subscriptionsService.deleteSubscription(ids,user);
   }
-  /*
 
-  @Patch('/:id/status')
-  updateSubscriptionStatus(
-    @Param('id') id: string,
-    @Body() updateTaskStatusdto: UpdateTaskStatusDto,
+  @Put()
+  updateSubscription(
+    @Body() subscription: SubscriptionDto,
     @GetUser() user :User
   ): Promise<Subscription> {
-    const { status } = updateTaskStatusdto;
-    return this.subscriptionsService.updateTaskSatus(id, status, user);
+    return this.subscriptionsService.updateSubscription(subscription.id,user,subscription);
   }
 
-   */
 }

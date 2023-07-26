@@ -1,20 +1,21 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { CreateSubscriptionDto } from "./dto/create-subscription.dto";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { SubscriptionDto } from "./dto/subscription.dto";
 import { SubscriptionsRepository } from "./subscription.repository";
-import { InjectRepository } from "@nestjs/typeorm";
 import { Subscription } from "./subscription.entity";
-import { GetSubscriptionFilterDto } from "./dto/get-subscription-filter.dto";
-import { User } from "../auth/user.entity";
-import { GetUser } from "../auth/get-user.decorator";
-import { SubscriptionController } from "./subscription.controller";
+import { User } from "../user/user.entity";
+import { IdsDto } from "./dto/ids.dto";
+import { CategoryDto } from "../category/dto/category.dto";
+import { SubscriptionTotalDto } from "./dto/subscriptionTotal.dto";
+import * as moment from "moment";
 
 
 @Injectable()
 export class SubscriptionsService {
+  private logger = new Logger('SubscriptionsRepository', { timestamp:true })
 
   constructor(private subscriptionsRepo:SubscriptionsRepository) {}
 
-  async getTaskById(id:string, user:User):Promise<Subscription>{
+  async getSubscriptionById(id:string, user:User):Promise<Subscription>{
     const found = await this.subscriptionsRepo.findOne({where:{ id, user}})
     if(!found){
       throw  new NotFoundException(`Task with ID ${id} not found`);
@@ -23,28 +24,42 @@ export class SubscriptionsService {
     return found;
   }
 
-  async createSubscription(createTaskDto: CreateSubscriptionDto, user:User): Promise<Subscription> {
+  async createSubscription(createTaskDto: SubscriptionDto,user:User): Promise<Subscription> {
     return this.subscriptionsRepo.createSubscription(createTaskDto,user)
   }
 
-  async deleteSubscription(id: string, user:User): Promise<void> {
-    const result = await this.subscriptionsRepo.delete({id,user})
-    if(result.affected===0){
-      throw  new NotFoundException(`Task with ID ${id} not found`);    }
+  deleteSubscription(ids: IdsDto, user:User): void {
+    return ids.ids.forEach(async id=> {
+      const result = await this.subscriptionsRepo.delete({ id, user })
+      if(result.affected===0){
+
+        throw  new NotFoundException(`Task with ID ${id} not found`);    }
+    })
+
   }
 
-  /*
-  async updateTaskSatus(id: string, status: TaskStatus, user:User): Promise<Subscription> {
-    const task = await this.getTaskById(id, user);
 
-    await this.subscriptionsRepo.save(task)
-    return task;
+  async updateSubscription(id: string, user:User,updatedSubscription:SubscriptionDto): Promise<Subscription> {
+    const subscription = await this.getSubscriptionById(id, user);
+    updatedSubscription.expirationDate=moment.utc(updatedSubscription.expirationDate).toDate()
+    Object.assign(subscription,{...updatedSubscription});
+    await this.subscriptionsRepo.save(subscription)
+    return subscription;
   }
 
-   */
 
-  getTasks(filterdto:GetSubscriptionFilterDto, user : User):Promise<Subscription[]>{
-    return this.subscriptionsRepo.getSubscription(filterdto, user);
+
+  getSubscriptions( user : User,from?:string,to?:string):Promise<Subscription[]>{
+    return this.subscriptionsRepo.getSubscription(user,from,to);
+  }
+
+  async getTotalSubscriptionExpenses(user:User, from?: string,
+                                     to?: string):Promise<SubscriptionTotalDto[]>{
+    return await this.subscriptionsRepo.getTotalSubscriptionExpenses(user,from,to);
+  }
+
+  async getAllTimeExpenses( user:User):Promise<number>{
+    return await this.subscriptionsRepo.getAllTimeExpenses(user);
   }
 
 }

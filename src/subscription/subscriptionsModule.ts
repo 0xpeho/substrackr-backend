@@ -4,7 +4,6 @@ import { SubscriptionsService } from './subscriptions.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SubscriptionsRepository } from './subscription.repository';
 import { Subscription } from "./subscription.entity";
-import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
   imports: [

@@ -1,12 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Notifications } from './entities/notification.entity';
-import { Repository } from 'typeorm';
-import * as firebase from 'firebase-admin';
-import * as path from 'path';
-import { NotificationToken } from './entities/notification-token.entity';
-import { NotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { Injectable } from "@nestjs/common";
+import * as firebase from "firebase-admin";
+import * as path from "path";
+import { NotificationToken } from "./entities/notification-token.entity";
+import { NotificationDto } from "./dto/create-notification.dto";
+import { User } from "../user/user.entity";
+import { NotificationRepository } from "./notification.repository";
 
 firebase.initializeApp({
   credential: firebase.credential.cert(
@@ -16,39 +14,37 @@ firebase.initializeApp({
 @Injectable()
 export class NotificationService {
   constructor(
-    @InjectRepository(Notifications)
-    private readonly notificationsRepo: Repository<Notifications>,
-    @InjectRepository(NotificationToken)
-    private notificationTokenRepo: Repository<NotificationToken>,
+    private notificationTokenRepo: NotificationRepository,
   ) {}
 
-  acceptPushNotification = async (
-    user: any,
+  async enablePushNotifications (
+    user: User,
     notification_dto: NotificationDto,
-  ): Promise<NotificationToken> => {
-    await this.notificationTokenRepo.update(
-      { user: { id: user.id } },
-      {
-        status: 'INACTIVE',
-      },
-    );
-    // save to db
-    const notification_token = await this.notificationTokenRepo.save({
+  ): Promise<NotificationToken> {
+    const push=await this.findPush(user,notification_dto.deviceId)
+    if(push){
+      push.status='ACTIVE'
+      return await this.notificationTokenRepo.save(push)
+    }
+    if(notification_dto.notification_token){
+
+    return await this.notificationTokenRepo.save({
       user: user,
-      device_type: notification_dto.device_type,
       notification_token: notification_dto.notification_token,
+      deviceId:notification_dto.deviceId,
       status: 'ACTIVE',
     });
-    return notification_token;
+    }
+
   };
 
   disablePushNotification = async (
-    user: any,
-    update_dto: UpdateNotificationDto,
+    user: User,
+    update_dto:NotificationDto
   ): Promise<void> => {
     try {
       await this.notificationTokenRepo.update(
-        { user: { id: user.id }, device_type: update_dto.device_type },
+        { user: { id: user.id },deviceId:update_dto.deviceId},
         {
           status: 'INACTIVE',
         },
@@ -58,23 +54,14 @@ export class NotificationService {
     }
   };
 
-  getNotifications = async (): Promise<any> => {
-    return await this.notificationsRepo.find();
-  };
 
-  sendPush = async (user: any, title: string, body: string): Promise<void> => {
+  async sendPush  ( title: string, body: string, user:User, deviceId:string): Promise<void>  {
     try {
-      const notification = await this.notificationTokenRepo.findOne({
-        where: { user: { id: user.id }, status: 'ACTIVE' },
+      const notifications = await this.notificationTokenRepo.find({
+        where: { user: { id: user.id }, status: 'ACTIVE',deviceId },
       });
-      if (notification) {
-        await this.notificationsRepo.save({
-          notification_token: notification,
-          title,
-          body,
-          status: 'ACTIVE',
-          created_by: user.username,
-        });
+      if (notifications) {
+        for (const notification of notifications) {
         await firebase
           .messaging()
           .send({
@@ -85,9 +72,16 @@ export class NotificationService {
           .catch((error: any) => {
             console.error(error);
           });
+        }
       }
     } catch (error) {
       return error;
     }
   };
+
+
+  findPush(user: User, deviceId: string) {
+    return this.notificationTokenRepo.findOne({where:{user,deviceId}})
+
+  }
 }

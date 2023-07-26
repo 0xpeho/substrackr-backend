@@ -1,8 +1,7 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from "class-validator";
-import { LanguageEnum } from "../enum/language.enum";
-import { ThemeEnum } from "../enum/theme.enum";
-import { CurrencyEnum } from "../enum/currency.enum";
-import { Column } from "typeorm";
+import { IsEnum, IsOptional} from "class-validator";
+import { LanguageEnum } from "../../user/enum/language.enum";
+import { ThemeEnum } from "../../user/enum/theme.enum";
+import { CurrencyEnum } from "../../user/enum/currency.enum";
 
 export class UpdateUserSettingsDto {
   deviceId:string;

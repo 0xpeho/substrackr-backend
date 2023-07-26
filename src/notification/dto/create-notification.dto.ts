@@ -1,5 +1,4 @@
 export class NotificationDto {
-  notification_token: string;
-
-  device_type: string;
+  notification_token?: string;
+  deviceId:string
 }

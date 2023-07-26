@@ -1,47 +1,65 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { SubscriptionDto } from "./dto/subscription.dto";
-import { SubscriptionsRepository } from "./subscription.repository";
-import { Subscription } from "./subscription.entity";
-import { GetSubscriptionFilterDto } from "./dto/get-subscription-filter.dto";
-import { User } from "../auth/user.entity";
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { UsersRepository } from "../auth/users.repository";
+import { User } from "./user.entity";
+import { AuthCredentialsDto } from "../auth/dto/auth-credentials.dto";
+import { NotificationDto } from "../notification/dto/create-notification.dto";
+import { NotificationService } from "../notification/notification.service";
+import { NotificationToken } from "../notification/entities/notification-token.entity";
+import { SettingsService } from "../settings/settings.service";
 
 
 @Injectable()
-export class SubscriptionsService {
+export class UserService {
 
-  constructor(private subscriptionsRepo:SubscriptionsRepository) {}
+  constructor(private usersRepository: UsersRepository, private readonly notificationService: NotificationService,
+              private settingsService:SettingsService) {
+  }
 
-  async getSubscriptionById(id:string, user:User):Promise<Subscription>{
-    const found = await this.subscriptionsRepo.findOne({where:{ id, user}})
-    if(!found){
-      throw  new NotFoundException(`Task with ID ${id} not found`);
+  async signUpFromGuest(credentials: AuthCredentialsDto, user: User): Promise<void> {
+    if (user.password && user.email) {
+      throw new UnauthorizedException();
     }
-
-    return found;
+    await this.usersRepository.updateUser(credentials, user.id);
   }
 
-  async createSubscription(createTaskDto: SubscriptionDto, user:User): Promise<Subscription> {
-    return this.subscriptionsRepo.createSubscription(createTaskDto,user)
+  async deleteUser(user: User): Promise<void> {
+    await this.usersRepository.deleteUser(user);
   }
 
-  async deleteSubscription(id: string, user:User): Promise<void> {
-    const result = await this.subscriptionsRepo.delete({id,user})
-    if(result.affected===0){
-      throw  new NotFoundException(`Task with ID ${id} not found`);    }
+  async findPush(
+    user: User,
+    deviceId: string
+  ): Promise<NotificationToken> {
+    return this.notificationService.findPush(user, deviceId);
+  };
+
+
+  async enablePush(
+    user: User,
+    update_dto: NotificationDto
+  ): Promise<any> {
+    const settings = await this.settingsService.getUserSettingsForDevice(user, update_dto.deviceId)
+    settings.alerts = true;
+    await this.usersRepository.save(user);
+    return await this.notificationService.enablePushNotifications(
+      user,
+      update_dto
+    );
+  };
+
+  async disablePush(
+    user: User,
+    update_dto: NotificationDto
+  ): Promise<void> {
+    const settings = await this.settingsService.getUserSettingsForDevice(user, update_dto.deviceId)
+    settings.alerts = false;
+    await this.usersRepository.save(user);
+    await this.notificationService.disablePushNotification(user,update_dto);
+  };
+
+
+  async isUserGuest(user: User) {
+    let foundUser = await this.usersRepository.findOne({ where: { id: user.id } })
+    return foundUser ? (foundUser.email===null&&foundUser.password===null): false
   }
-
-
-  async updateSubscription(id: string, user:User,updatedSubscription:SubscriptionDto): Promise<Subscription> {
-    const subscription = await this.getSubscriptionById(id, user);
-    Object.assign(subscription,{...updatedSubscription});
-    await this.subscriptionsRepo.save(subscription)
-    return subscription;
-  }
-
-
-
-  getSubscriptions(filterDto:GetSubscriptionFilterDto, user : User):Promise<Subscription[]>{
-    return this.subscriptionsRepo.getSubscription(filterDto, user);
-  }
-
 }

@@ -1,57 +1,67 @@
 import {
   Body,
-  Controller,
-  Delete,
-  Get, Logger,
-  Param,
-  Post, Put,
-  Query, UseGuards
+  Controller, Delete, Get,
+  Logger, Param, Post, Put,
+  UseGuards
 } from "@nestjs/common";
-import { SubscriptionDto } from './dto/subscription.dto';
-import { GetSubscriptionFilterDto } from './dto/get-subscription-filter.dto';
-import { SubscriptionsService } from "./subscriptions.service";
-import { Subscription } from "./subscription.entity";
+import { UserService } from "./user.service";
 import { AuthGuard } from "@nestjs/passport";
-import { User } from "../auth/user.entity";
 import { GetUser } from "../auth/get-user.decorator";
+import { User } from "./user.entity";
+import { AuthCredentialsDto } from "../auth/dto/auth-credentials.dto";
+import { NotificationDto } from "../notification/dto/create-notification.dto";
 
-@Controller('subscriptions')
-@UseGuards(AuthGuard('jwt'))
-export class SubscriptionController {
-  private logger = new Logger('SubscriptionController');
 
-  constructor(private subscriptionsService: SubscriptionsService) {}
+@Controller("user")
+@UseGuards(AuthGuard("jwt"))
+export class UserController {
+  private logger = new Logger("UserController");
+
+  constructor(private userService: UserService) {
+  }
+
+  @Post("/signup-from-guest")
+  signUpFromGuest(@GetUser() user: User, @Body() authCredentialsDto: AuthCredentialsDto): Promise<void> {
+    console.log('user');
+    return this.userService.signUpFromGuest(authCredentialsDto, user);
+  }
+
+  @Delete()
+  deleteUser(@GetUser() user: User): Promise<void> {
+    return this.userService.deleteUser(user);
+  }
 
   @Get()
-  getSubscriptions(@Query() filterDto:GetSubscriptionFilterDto, @GetUser() user : User): Promise<Subscription[]>{
-    this.logger.verbose(`User "${user.email}" retrieving all subscriptions with filter: ${ JSON.stringify(filterDto) }`)
-    return this.subscriptionsService.getSubscriptions(filterDto, user);
+  isUserGuest(@GetUser() user:User):Promise<boolean>{
+    return this.userService.isUserGuest(user)
   }
 
-  @Get('/:id')
-  getSubscriptionById(@Param('id') id: string, @GetUser() user : User): Promise<Subscription> {
-    return this.subscriptionsService.getSubscriptionById(id, user);
+  @Get("/push/:deviceId")
+  async getExistingPush(
+    @Param('deviceId') deviceId: string,
+    @GetUser() user: User
+  ) {
+    return await this.userService.findPush(user, deviceId);
   }
 
-
-  @Post()
-  createSubscription(@Body() subscriptionDto: SubscriptionDto, @GetUser() user : User): Promise<Subscription> {
-    this.logger.verbose(`User "${user.email}" creating a new Subscription with data ${JSON.stringify(subscriptionDto)}`)
-    return this.subscriptionsService.createSubscription(subscriptionDto,user);
+  @Put("/push/enable")
+  async enablePush(
+    @Body() update_dto: NotificationDto,
+    @GetUser() user: User
+  ) {
+    return await this.userService.enablePush(user, update_dto);
   }
 
-  @Delete('/:id')
-  deleteSubscriptionById(@Param('id') id: string, @GetUser() user:User): Promise<void> {
-    return this.subscriptionsService.deleteSubscription(id,user);
+  @Put("/push/disable")
+  async disablePush(
+    @GetUser() user: User,
+    @Body() update_dto: NotificationDto,
+  ) {
+    return await this.userService.disablePush(user,update_dto);
   }
 
-  @Put('/:id')
-  updateSubscription(
-    @Param('id') id: string,
-    @Body() subscriptionDto: SubscriptionDto,
-    @GetUser() user :User
-  ): Promise<Subscription> {
-    return this.subscriptionsService.updateSubscription(id,user,subscriptionDto);
+  @Get()
+  async getUserById(@GetUser() userEntity: User): Promise<User> {
+    return userEntity;
   }
-
 }

@@ -1,9 +1,9 @@
-import {IsEnum, IsOptional, IsString} from 'class-validator'
+import { IsOptional, IsString} from 'class-validator'
 
 export class GetSubscriptionFilterDto {
     @IsOptional()
     @IsString()
-    categorie:string;
+    category:string;
 
     @IsOptional()
     @IsString()

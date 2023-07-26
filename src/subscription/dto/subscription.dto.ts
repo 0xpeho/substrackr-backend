@@ -1,6 +1,11 @@
-import {IsNotEmpty} from 'class-validator'
-import { CycleEnum } from "../enum/cycle.enum";
-export class CreateSubscriptionDto {
+import { IsNotEmpty, IsOptional } from "class-validator";
+import { CategoryDto } from "../../category/dto/category.dto";
+
+export class SubscriptionDto {
+
+    @IsOptional()
+    id?:string;
+
     @IsNotEmpty()
     title: string;
 
@@ -15,10 +20,12 @@ export class CreateSubscriptionDto {
     expirationDate : Date;
 
     @IsNotEmpty()
-    cycle: CycleEnum;
-
-    category:string;
+    startDate : Date;
 
     @IsNotEmpty()
+    cycle: number;
+
     alerts:boolean;
+
+    category:CategoryDto;
 }

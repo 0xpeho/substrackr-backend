@@ -1,3 +1,4 @@
 export enum CurrencyEnum{
-  EURO='EUR'
+  EURO='EUR',
+  DOLLAR='DOL'
 }

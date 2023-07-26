@@ -1,8 +1,8 @@
-import { Column, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
-import { UUID } from 'typeorm/driver/mongodb/bson.typings';
-import { User } from "../auth/user.entity";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { User } from "../user/user.entity";
 import { Exclude } from "class-transformer";
-
+import { Optional } from "@nestjs/common";
+import { Category } from "../category/category.entity";
 @Entity()
 export class Subscription {
   @PrimaryGeneratedColumn('uuid')
@@ -11,11 +11,38 @@ export class Subscription {
   @Column()
   title: string;
 
-  @Column()
+  @Column({nullable:true})
+  @Optional()
   description: string;
 
+  @Column({nullable:true})
+  @Optional()
+  paymentType: string;
 
-  @ManyToOne(type => User,user=> user.subscriptions, {eager:false})
+  @Column({ type: 'numeric', precision: 10, scale: 2 })
+  price: number;
+
+  @CreateDateColumn({ type: 'date' })
+  startDate : Date;
+
+  @CreateDateColumn({ type: 'date' })
+  expirationDate : Date;
+
+  @Column({default:1})
+  cycle: number;
+
+
+  @Column({default:false})
+  alerts:boolean;
+
+  @Column({default:false})
+  hasBeenNotified:boolean;
+
+  @ManyToOne(_type => User,user=> user.subscriptions, {cascade:true,onDelete:'CASCADE'})
   @Exclude({ toPlainOnly:true })
   user:User
+
+  @ManyToOne(_type => Category,category=> category.subscriptions,{eager:true})
+  @Optional()
+  category:Category
 }
